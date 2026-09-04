@@ -1,0 +1,11 @@
+{
+  "name": "tech-watch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ingest": "node scripts/ingest.mjs",
+    "report": "node scripts/report.mjs",
+    "search": "node scripts/search.mjs"
+  }
+}
