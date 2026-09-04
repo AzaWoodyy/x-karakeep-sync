@@ -4,8 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "export:karakeep": "node scripts/export-karakeep.mjs",
     "ingest": "node scripts/ingest.mjs",
     "report": "node scripts/report.mjs",
-    "search": "node scripts/search.mjs"
+    "search": "node scripts/search.mjs",
+    "sync": "node scripts/sync-x-karakeep.mjs",
+    "sync:install": "node scripts/schedule.mjs install",
+    "sync:setup": "node scripts/setup-sync.mjs",
+    "sync:status": "node scripts/schedule.mjs status",
+    "sync:uninstall": "node scripts/schedule.mjs uninstall",
+    "sync:x-auth": "node scripts/auth-x.mjs",
+    "test": "node --test"
   }
 }

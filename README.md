@@ -1,12 +1,64 @@
 # tech-watch
 
-Local catalog of my X (Twitter) bookmarks.
+Local catalog and automatic Karakeep archive of my X (Twitter) bookmarks.
 
-Extraction is done in the browser with [twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter)
-(no API key, no cost, no ~800-bookmark cap). This repo normalizes those exports into a
-deduplicated store I can search, tag, and browse.
+The normal workflow reads bookmarks through the official X API, keeps a deduplicated local
+store, and copies new links to Karakeep. It is append-only: removing an X bookmark never
+deletes its archived copy. Browser exports remain available as a recovery path.
 
-## One-time browser setup
+## Automatic X → Karakeep sync
+
+### 1. Create the X app
+
+In the [X Developer Console](https://developer.x.com/):
+
+1. Create a project/app and enable OAuth 2.0.
+2. Choose **Native App** (a public PKCE client).
+3. Set the callback URI exactly to `http://127.0.0.1:8787/callback`.
+4. Give it read access. The authorization flow requests only `bookmark.read`, `tweet.read`,
+   `users.read`, and `offline.access`.
+5. Copy the OAuth 2.0 **Client ID**. An app bearer token is not sufficient for private
+   bookmarks.
+
+X bills bookmark reads as owned reads. The sync fetches ten bookmarks per page by default and
+stops as soon as it reaches a bookmark already in the local store.
+
+### 2. Configure and authorize
+
+Find the target Karakeep list ID at the end of its URL, then run:
+
+```sh
+npm run sync:setup
+npm run sync:x-auth
+```
+
+Setup stores the non-secret settings under `.sync/`. The Karakeep key and rotating X OAuth
+tokens are stored in macOS Keychain under `app.tech-watch.sync`; they are never committed.
+
+### 3. Test and enable the daily run
+
+```sh
+npm run sync -- --dry-run       # calls X, but writes nothing
+npm run sync                    # first live sync
+npm run sync:install            # every day at 08:15 local time
+npm run sync:status
+```
+
+Choose a different time when installing if needed:
+
+```sh
+npm run sync:install -- --hour=18 --minute=30
+```
+
+Scheduler output is written under `.sync/logs/`. To remove only the schedule (not bookmarks or
+credentials), run `npm run sync:uninstall`.
+
+The sync is safe to retry. Karakeep returns the existing bookmark for duplicate URLs, list
+attachment is idempotent, and interrupted uploads remain queued in `.sync/state.json`.
+
+## Manual recovery import
+
+### One-time browser setup
 
 1. Install a userscript manager: [Tampermonkey](https://www.tampermonkey.net/) or
    [Violentmonkey](https://violentmonkey.github.io/).
@@ -14,7 +66,7 @@ deduplicated store I can search, tag, and browse.
    https://github.com/prinsss/twitter-web-exporter/releases/latest/download/twitter-web-exporter.user.js
 3. Open https://x.com/i/bookmarks — a floating control panel appears on the left.
 
-## Each export
+### Each export
 
 1. **Scroll to the very bottom of the bookmarks page.** The script can only capture what the
    web app actually loads, so anything you haven't scrolled past is not in the export.
@@ -23,17 +75,22 @@ deduplicated store I can search, tag, and browse.
    `legacy.created_at` and the expanded (non-`t.co`) URLs that `ingest.mjs` prefers.
 4. Drop the downloaded `.json` into `raw/`.
 
-## Then
+### Import and inspect
 
 ```sh
 npm run ingest    # raw/*.json -> data/bookmarks.jsonl (deduplicated, idempotent)
 npm run report    # -> index.md
 npm run search -- "rust async"
+npm run export:karakeep -- --limit=5 --out=exports/karakeep-test.html
 ```
+
+The Karakeep export uses Netscape bookmark HTML, which can be uploaded from
+Karakeep's Settings → Import/Export page. Omit `--limit=5` to export the full store.
 
 ## Store
 
-`data/bookmarks.jsonl` — one JSON object per line, newest first, keyed by tweet id.
+`data/bookmarks.jsonl` — one JSON object per line, newest first, keyed by tweet id. This file
+and the generated `index.md` contain private bookmark data and are intentionally gitignored.
 
 Re-ingesting is safe and repeatable: engagement metrics are refreshed from the newest export,
 while `tags`, `notes`, and `first_seen` are preserved. Curate by editing those fields directly
@@ -49,4 +106,5 @@ node scripts/search.mjs --tag=rust
 node scripts/search.mjs --author=pgsql_hacker
 ```
 
-`raw/*.json` is gitignored — the exports are disposable, the store is the artifact.
+`raw/*.json`, `data/*.jsonl`, `index.md`, `.sync/`, and `exports/*.html` are all gitignored so
+the repository can be public without publishing bookmark data or local configuration.

@@ -2,7 +2,7 @@
 // Idempotent: re-ingesting the same export preserves manual `tags` and `notes`,
 // and refreshes engagement metrics on tweets already in the store.
 
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -115,6 +115,7 @@ async function main() {
   const sorted = [...store.values()].sort((a, b) =>
     (b.created_at ?? '').localeCompare(a.created_at ?? ''),
   );
+  await mkdir(path.dirname(STORE), { recursive: true });
   await writeFile(STORE, sorted.map((e) => JSON.stringify(e)).join('\n') + '\n');
 
   console.log(`Files ingested : ${files.length}`);
