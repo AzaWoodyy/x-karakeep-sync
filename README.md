@@ -1,4 +1,4 @@
-# tech-watch
+# x-karakeep-sync
 
 Local catalog and automatic Karakeep archive of my X (Twitter) bookmarks.
 
@@ -33,7 +33,9 @@ npm run sync:x-auth
 ```
 
 Setup stores the non-secret settings under `.sync/`. The Karakeep key and rotating X OAuth
-tokens are stored in macOS Keychain under `app.tech-watch.sync`; they are never committed.
+tokens are stored in macOS Keychain under `app.tech-watch.sync` (the project's original name,
+kept so existing installs keep working); they are never committed. Secrets are written through
+`security`'s standard input, never as command-line arguments.
 
 ### 3. Test and enable the daily run
 
@@ -108,3 +110,7 @@ node scripts/search.mjs --author=pgsql_hacker
 
 `raw/*.json`, `data/*.jsonl`, `index.md`, `.sync/`, and `exports/*.html` are all gitignored so
 the repository can be public without publishing bookmark data or local configuration.
+
+## License
+
+[MIT](LICENSE)

@@ -1,5 +1,5 @@
 {
-  "name": "tech-watch",
+  "name": "x-karakeep-sync",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -15,5 +15,6 @@
     "sync:uninstall": "node scripts/schedule.mjs uninstall",
     "sync:x-auth": "node scripts/auth-x.mjs",
     "test": "node --test"
-  }
+  },
+  "license": "MIT"
 }
