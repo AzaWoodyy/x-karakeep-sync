@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -67,17 +67,38 @@ export async function readKeychainSecret(account) {
   }
 }
 
+function quoteSecurityArgument(value) {
+  return `"${value.replace(/[\\"]/g, '\\$&')}"`;
+}
+
+// The secret goes through stdin (`security -i`) rather than argv, where `ps` could read it.
 export async function writeKeychainSecret(account, value) {
-  await execFileAsync('/usr/bin/security', [
+  if (/[\r\n]/.test(value)) throw new Error('Keychain secrets cannot contain line breaks.');
+
+  const command = [
     'add-generic-password',
     '-U',
     '-s',
-    KEYCHAIN_SERVICE,
+    quoteSecurityArgument(KEYCHAIN_SERVICE),
     '-a',
-    account,
+    quoteSecurityArgument(account),
     '-w',
-    value,
-  ]);
+    quoteSecurityArgument(value),
+  ].join(' ');
+
+  await new Promise((resolve, reject) => {
+    const child = spawn('/usr/bin/security', ['-i'], { stdio: ['pipe', 'ignore', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0 && !stderr.trim()) resolve();
+      else reject(new Error(`Could not save "${account}" in macOS Keychain: ${stderr.trim() || `exit ${code}`}`));
+    });
+    child.stdin.end(`${command}\n`);
+  });
 }
 
 export async function fetchJson(url, options = {}) {
